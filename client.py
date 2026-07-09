@@ -1,15 +1,22 @@
 import socket
 import threading
 
-HOST = "127.0.0.1"
-PORT = 5000
-
-username = input("Nom d'utilisateur : ")
+HOST = "192.168.88.47"   # IP an'ilay serveur
+PORT = 5001
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((HOST, PORT))
 
+try:
+    client.connect((HOST, PORT))
+    print("Connecté au serveur")
+except Exception as e:
+    print("Impossible de se connecter au serveur")
+    print(e)
+    exit()
 
+username = input("Votre nom : ")
+
+# Mandray hafatra avy amin'ny serveur
 def receive():
     while True:
         try:
@@ -21,19 +28,22 @@ def receive():
                 print(message)
 
         except:
-            print("Connexion interrompue.")
+            print("Connexion fermée.")
             client.close()
             break
 
-
-def write():
+# Mandefa hafatra any amin'ny serveur
+def send():
     while True:
-        message = input("")
-        client.send(f"{username} : {message}".encode())
-
+        try:
+            message = input()
+            client.send(f"{username} : {message}".encode())
+        except:
+            client.close()
+            break
 
 receive_thread = threading.Thread(target=receive)
 receive_thread.start()
 
-write_thread = threading.Thread(target=write)
-write_thread.start()
+send_thread = threading.Thread(target=send)
+send_thread.start()
