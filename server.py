@@ -1,79 +1,115 @@
 import socket
 import threading
 
+
 HOST = "0.0.0.0"
-PORT = 5000
-
-clients = []
-usernames = []
+PORT = 5001
 
 
-def broadcast(message):
-    for client in clients:
-        client.send(message.encode())
+flashcards = [
+    {
+        "question": "Qu'est-ce que Python ?",
+        "answer": "langage de programmation"
+    },
+    {
+        "question": "Qu'est-ce que HTML ?",
+        "answer": "langage de balisage"
+    },
+    {
+        "question": "Qu'est-ce que SQL ?",
+        "answer": "base de donnees"
+    }
+]
+
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+server.bind((HOST, PORT))
+server.listen()
+
+print("Serveur démarré...")
+print("En attente d'un client...")
 
 
 def handle(client):
 
-    while True:
-
-        try:
-
-            message = client.recv(1024).decode()
-
-            if not message:
-                break
-
-            print(message)
-
-            broadcast(message)
-
-        except:
-            index = clients.index(client)
-
-            clients.remove(client)
-
-            client.close()
-
-            username = usernames[index]
-
-            usernames.remove(username)
-
-            broadcast(f"{username} a quitté le serveur.")
-
-            break
+    score = 0
 
 
-def receive():
+    try:
 
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        for card in flashcards:
 
-    server.bind((HOST, PORT))
-
-    server.listen()
-
-    print("Serveur lancé...")
-
-    while True:
-
-        client, address = server.accept()
-
-        print("Nouvelle connexion :", address)
-
-        client.send("USERNAME".encode())
-
-        username = client.recv(1024).decode()
-
-        usernames.append(username)
-
-        clients.append(client)
-
-        print(username, "connecté.")
-
-        broadcast(f"{username} a rejoint le serveur.")
-
-        thread = threading.Thread(target=handle, args=(client,))
-        thread.start()
+            # Envoyer question
+            client.send(
+                card["question"].encode()
+            )
 
 
-receive()
+            # Recevoir réponse
+            response = client.recv(1024).decode().lower()
+
+
+            # Vérification
+            if card["answer"] in response:
+
+                score += 1
+
+                message = "Correct !"
+
+            else:
+
+                message = (
+                    "Faux ! Bonne réponse : "
+                    + card["answer"]
+                )
+
+
+            client.send(
+                message.encode()
+            )
+
+
+        # Score final
+
+        final = (
+            "FINI\n"
+            "Votre score final : "
+            + str(score)
+            + "/"
+            + str(len(flashcards))
+        )
+
+
+        client.send(
+            final.encode()
+        )
+
+
+    except:
+
+        print("Client déconnecté")
+
+
+    finally:
+
+        client.close()
+
+
+
+while True:
+
+    client, address = server.accept()
+
+    print(
+        "Nouveau client :",
+        address
+    )
+
+
+    thread = threading.Thread(
+        target=handle,
+        args=(client,)
+    )
+
+    thread.start()
