@@ -1,92 +1,175 @@
 import socket
 import threading
 import tkinter as tk
-from tkinter import scrolledtext
 
 
-HOST = "192.168.88.47"   # IP an'ny serveur
+HOST = "192.168.88.47"
 PORT = 5001
 
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client = socket.socket(
+    socket.AF_INET,
+    socket.SOCK_STREAM
+)
+
 
 try:
-    client.connect((HOST, PORT))
+
+    client.connect(
+        (HOST, PORT)
+    )
+
+    print("Connecté au serveur")
+
+
 except:
-    print("Impossible de se connecter au serveur")
+
+    print("Connexion impossible")
     exit()
 
 
-username = input("Votre nom : ")
-
 
 def receive():
+
     while True:
+
         try:
+
             message = client.recv(1024).decode()
 
-            if message == "USERNAME":
-                client.send(username.encode())
+
+            if message.startswith("FINI"):
+
+                question_label.config(
+                    text="Terminé !"
+                )
+
+                result_label.config(
+                    text=message,
+                    font=("Arial", 16)
+                )
+
+
+                answer_entry.config(
+                    state="disabled"
+                )
+
+                validate_button.config(
+                    state="disabled"
+                )
+
+
+            elif message.startswith("Correct") or message.startswith("Faux"):
+
+                result_label.config(
+                    text=message
+                )
+
 
             else:
-                chat_area.config(state="normal")
-                chat_area.insert(tk.END, message + "\n")
-                chat_area.config(state="disabled")
-                chat_area.yview(tk.END)
+
+                question_label.config(
+                    text=message
+                )
+
+
 
         except:
+
             break
 
 
-def send_message():
-    message = message_entry.get()
-
-    if message:
-        message = username + " : " + message
-        client.send(message.encode())
-        message_entry.delete(0, tk.END)
 
 
-# Fenêtre principale
+def send_answer():
+
+    answer = answer_entry.get()
+
+
+    if answer:
+
+        client.send(
+            answer.encode()
+        )
+
+
+        answer_entry.delete(
+            0,
+            tk.END
+        )
+
+
+
+
+# =====================
+# Interface graphique
+# =====================
+
+
 window = tk.Tk()
-window.title("Chat Application")
-window.geometry("500x500")
 
-
-# Zone affichage message
-chat_area = scrolledtext.ScrolledText(
-    window,
-    state="disabled",
-    width=50,
-    height=25
+window.title(
+    "Flashcards IA"
 )
 
-chat_area.pack(pady=10)
+window.geometry(
+    "500x400"
+)
 
 
-# Zone écriture
-message_entry = tk.Entry(
+
+question_label = tk.Label(
+    window,
+    text="Question",
+    font=("Arial",16),
+    wraplength=400
+)
+
+question_label.pack(
+    pady=30
+)
+
+
+
+answer_entry = tk.Entry(
     window,
     width=40
 )
 
-message_entry.pack(side=tk.LEFT, padx=10)
+answer_entry.pack()
 
 
-# Bouton envoyer
-send_button = tk.Button(
+
+validate_button = tk.Button(
     window,
-    text="Envoyer",
-    command=send_message
+    text="Valider",
+    command=send_answer
 )
 
-send_button.pack(side=tk.RIGHT, padx=10)
+validate_button.pack(
+    pady=20
+)
 
 
-# Thread réception
-receive_thread = threading.Thread(target=receive)
+
+result_label = tk.Label(
+    window,
+    text="",
+    font=("Arial",12)
+)
+
+result_label.pack()
+
+
+
+receive_thread = threading.Thread(
+    target=receive
+)
+
 receive_thread.daemon = True
+
 receive_thread.start()
+
 
 
 window.mainloop()
